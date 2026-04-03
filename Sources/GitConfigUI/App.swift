@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct GitToggleUserUIApp: App {
+struct GitConfigUIApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

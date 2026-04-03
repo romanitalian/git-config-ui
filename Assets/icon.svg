@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0c0a1e"/>
+    </linearGradient>
+    <linearGradient id="dimUser" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#3730a3"/>
+    </linearGradient>
+    <linearGradient id="activeUser" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#c7d2fe"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bgGrad)"/>
+
+  <!-- Subtle grid lines for depth -->
+  <line x1="512" y1="0" x2="512" y2="1024" stroke="#ffffff" stroke-width="1" opacity="0.03"/>
+  <line x1="0" y1="512" x2="1024" y2="512" stroke="#ffffff" stroke-width="1" opacity="0.03"/>
+
+  <!-- ── Left user (inactive / dim) ── -->
+  <g opacity="0.45">
+    <!-- head -->
+    <circle cx="228" cy="278" r="88" fill="url(#dimUser)"/>
+    <!-- shoulders -->
+    <path d="M 52,530 Q 52,418 228,418 Q 404,418 404,530 Z" fill="url(#dimUser)"/>
+  </g>
+
+  <!-- ── Right user (active / bright) ── -->
+  <!-- head -->
+  <circle cx="796" cy="278" r="88" fill="url(#activeUser)"/>
+  <!-- shoulders -->
+  <path d="M 620,530 Q 620,418 796,418 Q 972,418 972,530 Z" fill="url(#activeUser)"/>
+
+  <!-- ── Switch arrows (center) ── -->
+  <!-- Arrow: left → right (top) -->
+  <line x1="418" y1="258" x2="590" y2="258" stroke="#818cf8" stroke-width="30" stroke-linecap="round"/>
+  <polygon points="608,258 572,236 572,280" fill="#818cf8"/>
+
+  <!-- Arrow: right → left (bottom) -->
+  <line x1="606" y1="318" x2="434" y2="318" stroke="#4f46e5" stroke-width="30" stroke-linecap="round"/>
+  <polygon points="416,318 452,296 452,340" fill="#4f46e5"/>
+
+  <!-- ── Git graph at bottom ── -->
+  <!-- vertical stem -->
+  <line x1="512" y1="656" x2="512" y2="590" stroke="#6366f1" stroke-width="26" stroke-linecap="round"/>
+  <!-- commit node (top of stem) -->
+  <circle cx="512" cy="575" r="34" fill="#4338ca" stroke="#818cf8" stroke-width="10"/>
+
+  <!-- main branch node -->
+  <circle cx="512" cy="680" r="46" fill="#6366f1"/>
+
+  <!-- left branch -->
+  <line x1="490" y1="718" x2="348" y2="856" stroke="#4f46e5" stroke-width="24" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="334" cy="872" r="32" fill="#4338ca" opacity="0.8"/>
+
+  <!-- right branch (active) -->
+  <line x1="534" y1="718" x2="676" y2="856" stroke="#6366f1" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="690" cy="872" r="32" fill="#818cf8"/>
+</svg>

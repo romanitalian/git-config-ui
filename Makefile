@@ -1,12 +1,15 @@
 SHELL:=bash
-GREEN := $(shell tput setaf 2 2>/dev/null || echo "")
+GREEN  := $(shell tput setaf 2 2>/dev/null || echo "")
 YELLOW := $(shell tput setaf 3 2>/dev/null || echo "")
-RED := $(shell tput setaf 1 2>/dev/null || echo "")
-RESET := $(shell tput sgr0 2>/dev/null || echo "")
+RED    := $(shell tput setaf 1 2>/dev/null || echo "")
+RESET  := $(shell tput sgr0  2>/dev/null || echo "")
 
-APP_NAME    := GitToggleUserUI
+APP_NAME    := GitConfigUI
 BUNDLE      := $(APP_NAME).app
 INSTALL_DIR := /Applications
+SVG_SRC     := Assets/icon.svg
+ICONSET     := Assets/AppIcon.iconset
+ICNS        := Assets/AppIcon.icns
 
 .DEFAULT_GOAL := help
 
@@ -22,8 +25,7 @@ help: ## Available commands
 
 ##@ Targets
 
-
-.PHONY: build run open bundle install uninstall clean test help
+.PHONY: build build-release run open icon bundle install uninstall clean test help
 
 build: ## Build debug binary
 	swift build
@@ -37,18 +39,42 @@ run: ## Run app (terminal-attached, may lose keyboard focus)
 open: build ## Build and open as .app (correct keyboard focus)
 	open .build/debug/$(APP_NAME)
 
-bundle: build-release ## Create .app bundle in current directory
+icon: ## Generate AppIcon.icns from Assets/icon.svg (requires: brew install librsvg)
+	@which rsvg-convert > /dev/null 2>&1 || { echo "$(RED)Missing rsvg-convert. Run: brew install librsvg$(RESET)"; exit 1; }
+	@mkdir -p $(ICONSET)
+	@echo "$(GREEN)Rendering icon sizes...$(RESET)"
+	@for size in 16 32 64 128 256 512 1024; do \
+		rsvg-convert -w $$size -h $$size $(SVG_SRC) -o $(ICONSET)/icon_$${size}x$${size}.png; \
+	done
+	@cp $(ICONSET)/icon_32x32.png    $(ICONSET)/icon_16x16@2x.png
+	@cp $(ICONSET)/icon_64x64.png    $(ICONSET)/icon_32x32@2x.png
+	@cp $(ICONSET)/icon_256x256.png  $(ICONSET)/icon_128x128@2x.png
+	@cp $(ICONSET)/icon_512x512.png  $(ICONSET)/icon_256x256@2x.png
+	@cp $(ICONSET)/icon_1024x1024.png $(ICONSET)/icon_512x512@2x.png
+	@iconutil -c icns $(ICONSET) -o $(ICNS)
+	@echo "$(GREEN)Icon created: $(ICNS)$(RESET)"
+
+bundle: build-release ## Create .app bundle in current directory (run 'make icon' first)
 	@echo "$(GREEN)Building .app bundle...$(RESET)"
 	@rm -rf $(BUNDLE)
 	@mkdir -p $(BUNDLE)/Contents/MacOS
+	@mkdir -p $(BUNDLE)/Contents/Resources
 	@cp .build/release/$(APP_NAME) $(BUNDLE)/Contents/MacOS/$(APP_NAME)
-	@/usr/libexec/PlistBuddy -c "Add :CFBundleName           string $(APP_NAME)"        $(BUNDLE)/Contents/Info.plist
-	@/usr/libexec/PlistBuddy -c "Add :CFBundleExecutable     string $(APP_NAME)"        $(BUNDLE)/Contents/Info.plist
-	@/usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier     string com.romanitalian.$(APP_NAME)" $(BUNDLE)/Contents/Info.plist
-	@/usr/libexec/PlistBuddy -c "Add :CFBundleVersion        string 1.0"                $(BUNDLE)/Contents/Info.plist
-	@/usr/libexec/PlistBuddy -c "Add :CFBundlePackageType    string APPL"               $(BUNDLE)/Contents/Info.plist
-	@/usr/libexec/PlistBuddy -c "Add :NSPrincipalClass       string NSApplication"      $(BUNDLE)/Contents/Info.plist
-	@/usr/libexec/PlistBuddy -c "Add :NSHighResolutionCapable bool true"                $(BUNDLE)/Contents/Info.plist
+	@if [ -f $(ICNS) ]; then \
+		cp $(ICNS) $(BUNDLE)/Contents/Resources/AppIcon.icns; \
+		echo "$(GREEN)Icon included$(RESET)"; \
+	else \
+		echo "$(YELLOW)No icon found — run 'make icon' to generate it$(RESET)"; \
+	fi
+	@/usr/libexec/PlistBuddy -c "Add :CFBundleName            string $(APP_NAME)"               $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :CFBundleExecutable      string $(APP_NAME)"               $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier      string com.romanitalian.$(APP_NAME)" $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :CFBundleVersion         string 1.0"                       $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0"                    $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :CFBundlePackageType     string APPL"                      $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :NSPrincipalClass        string NSApplication"             $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :NSHighResolutionCapable bool true"                        $(BUNDLE)/Contents/Info.plist
+	@/usr/libexec/PlistBuddy -c "Add :CFBundleIconFile        string AppIcon"                   $(BUNDLE)/Contents/Info.plist
 	@echo "$(GREEN)Bundle created: $(BUNDLE)$(RESET)"
 
 install: bundle ## Install app to /Applications
@@ -61,9 +87,9 @@ uninstall: ## Remove app from /Applications
 	@rm -rf $(INSTALL_DIR)/$(BUNDLE)
 	@echo "$(YELLOW)Uninstalled: $(INSTALL_DIR)/$(BUNDLE)$(RESET)"
 
-clean: ## Clean build artifacts and bundle
+clean: ## Clean build artifacts, bundle and generated icons
 	swift package clean
-	@rm -rf $(BUNDLE)
+	@rm -rf $(BUNDLE) $(ICONSET) $(ICNS)
 
 test: ## Run tests
 	swift test
