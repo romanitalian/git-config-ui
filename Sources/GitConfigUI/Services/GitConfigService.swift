@@ -73,6 +73,47 @@ final class GitConfigService {
         _ = runGit(["config", "--global", "--remove-section", "gituserchange-profile.\(profile.id)"])
     }
 
+    // MARK: - Aliases
+
+    func loadAliases() -> [Alias] {
+        guard let output = runGit(["config", "--global", "--get-regexp", "alias\\."]) else {
+            return []
+        }
+        return output
+            .components(separatedBy: "\n")
+            .filter { !$0.isEmpty }
+            .compactMap { line -> Alias? in
+                let parts = line.components(separatedBy: " ")
+                guard parts.count >= 2 else { return nil }
+                let key = parts[0].replacingOccurrences(of: "alias.", with: "")
+                let value = parts.dropFirst().joined(separator: " ")
+                return Alias(key: key, value: value)
+            }
+            .sorted { $0.key < $1.key }
+    }
+
+    func saveAlias(_ alias: Alias) {
+        _ = runGit(["config", "--global", "alias.\(alias.key)", alias.value])
+    }
+
+    func deleteAlias(key: String) {
+        _ = runGit(["config", "--global", "--unset", "alias.\(key)"])
+    }
+
+    // MARK: - Generic Settings
+
+    func readSetting(_ key: String) -> String {
+        gitConfig(key) ?? ""
+    }
+
+    func writeSetting(_ key: String, value: String) {
+        _ = runGit(["config", "--global", key, value])
+    }
+
+    func unsetSetting(_ key: String) {
+        _ = runGit(["config", "--global", "--unset", key])
+    }
+
     // MARK: - Private
 
     private func gitConfig(_ key: String) -> String? {

@@ -10,6 +10,6 @@ struct GitConfigUIApp: App {
                 }
         }
         .windowResizability(.contentSize)
-        .defaultSize(width: 400, height: 500)
+        .defaultSize(width: 680, height: 500)
     }
 }
