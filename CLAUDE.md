@@ -9,7 +9,8 @@ make build          # debug build
 make build-release  # release build (optimized)
 make run            # run via swift run (terminal keeps keyboard focus)
 make open           # build + open as .app (correct keyboard focus)
-make icon           # SVG → AppIcon.icns  (requires: brew install librsvg)
+make import-logo    # logo.png → square Assets/logo-source.png (ImageMagick center extent)
+make icon           # AppIcon.icns from Assets/logo-source.png (sips) or else Assets/icon.svg (rsvg-convert)
 make bundle         # release build + .app bundle with icon
 make install        # bundle + copy to /Applications
 make uninstall      # remove from /Applications
@@ -57,4 +58,6 @@ Swift Package Manager project with a thin executable and shared library. macOS 1
 
 ## Assets
 
-`Assets/icon.svg` is the source for the app icon. Run `make icon` to compile it to `Assets/AppIcon.icns`, which `make bundle` then includes in `Contents/Resources/`.
+**App icon:** Prefer [`Assets/logo-source.png`](Assets/logo-source.png) as the raster master (square); `make icon` resizes it with `sips` to `Assets/AppIcon.iconset` → `Assets/AppIcon.icns` (used by `make bundle`) and copies sizes into [`Sources/GitConfigs/Assets.xcassets/AppIcon.appiconset/`](Sources/GitConfigs/Assets.xcassets/AppIcon.appiconset/) for Xcode. If `logo-source.png` is missing, the Makefile falls back to [`Assets/icon.svg`](Assets/icon.svg) via `rsvg-convert` (requires Homebrew `librsvg`). The same run refreshes [`Sources/GitConfigsLib/Resources/AppLogo.png`](Sources/GitConfigsLib/Resources/AppLogo.png) for the in-window logo in `ContentView`. For a tall/wide master image in the repo root, use **`make import-logo`** ([`logo.png`](logo.png) → square `logo-source.png` via ImageMagick).
+
+The asset catalog under `Sources/GitConfigs/Assets.xcassets` is **excluded** from the SwiftPM `GitConfigs` executable target in [`Package.swift`](Package.swift) so `swift build` does not treat it as stray sources; XcodeGen picks it up from the same directory layout.

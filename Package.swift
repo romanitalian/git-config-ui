@@ -15,12 +15,14 @@ let package = Package(
     targets: [
         .target(
             name: "GitConfigsLib",
-            path: "Sources/GitConfigsLib"
+            path: "Sources/GitConfigsLib",
+            resources: [.process("Resources")]
         ),
         .executableTarget(
             name: "GitConfigs",
             dependencies: ["GitConfigsLib"],
-            path: "Sources/GitConfigs"
+            path: "Sources/GitConfigs",
+            exclude: ["Assets.xcassets"]
         ),
         .testTarget(
             name: "GitConfigsTests",

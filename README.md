@@ -10,7 +10,8 @@ macOS menu-bar-friendly utility to manage **Git user profiles** (`user.name` / `
 - **Swift** toolchain (Xcode or standalone)
 - **`/usr/bin/git`** on PATH for runtime operations
 - **Xcode** + **XcodeGen** (`brew install xcodegen`) for **UI tests** (`make test-ui`)
-- **`rsvg-convert`** (`brew install librsvg`) if you run `make icon`
+- **`rsvg-convert`** (`brew install librsvg`) only if you run `make icon` **without** [`Assets/logo-source.png`](Assets/logo-source.png) (then the icon is built from [`Assets/icon.svg`](Assets/icon.svg))
+- **`magick`** (`brew install imagemagick`) only if you use **`make import-logo`** to turn a non-square [`logo.png`](logo.png) in the repo root into a square [`Assets/logo-source.png`](Assets/logo-source.png)
 
 ### Non-macOS contributors
 
@@ -30,7 +31,8 @@ make test        # unit + BDD tests (isolated test HOME; needs git)
 Release bundle and install:
 
 ```bash
-make icon        # SVG → AppIcon.icns (optional)
+make import-logo # optional: logo.png → square Assets/logo-source.png (1024², center crop)
+make icon        # logo PNG (preferred) or SVG → AppIcon.icns + Xcode AppIcon + in-app logo asset
 make bundle      # release .app in the repo root
 make install     # copy bundle to /Applications
 ```
