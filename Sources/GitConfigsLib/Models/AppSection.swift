@@ -6,6 +6,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case core        = "Core Settings"
     case credentials = "Credentials"
     case diffMerge   = "Diff & Merge"
+    case about       = "About"
 
     var id: String { rawValue }
 
@@ -16,6 +17,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .core:        return "gearshape"
         case .credentials: return "key"
         case .diffMerge:   return "arrow.triangle.branch"
+        case .about:       return "info.circle"
         }
     }
 }
