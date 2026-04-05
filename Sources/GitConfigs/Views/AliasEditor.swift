@@ -37,7 +37,6 @@ struct AliasEditor: View {
                     TextField("e.g. co", text: $key)
                         .textFieldStyle(.roundedBorder)
                         .focused($focusedField, equals: .key)
-                        .disabled(existingKey != nil)
                         .onChange(of: key) { newValue in
                             // strip spaces and dots — not valid in alias keys
                             let filtered = newValue.filter { !$0.isWhitespace && $0 != "." }
@@ -47,8 +46,11 @@ struct AliasEditor: View {
                 GridRow {
                     Text("Value:")
                         .frame(width: 50, alignment: .trailing)
-                    TextField("e.g. checkout", text: $value)
-                        .textFieldStyle(.roundedBorder)
+                        .padding(.top, 4)
+                    TextEditor(text: $value)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(minHeight: 120)
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(NSColor.separatorColor)))
                         .focused($focusedField, equals: .value)
                 }
             }
@@ -70,7 +72,7 @@ struct AliasEditor: View {
             }
             .padding(16)
         }
-        .frame(width: 350)
+        .frame(width: 480)
         .onAppear { focusedField = existingKey == nil ? .key : .value }
     }
 }

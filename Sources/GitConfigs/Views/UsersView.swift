@@ -1,19 +1,19 @@
 import SwiftUI
 
 struct UsersView: View {
-    @State private var currentName = ""
-    @State private var currentEmail = ""
     @State private var profiles: [Profile] = []
-    @State private var showEditor = false
+    @State private var activeProfileIds: Set<String> = []
+    @State private var showEditor    = false
     @State private var editingProfile: Profile?
+    /// Fresh SwiftUI identity per sheet open so ProfileEditor @State is not reused across sessions.
+    @State private var editorSessionId = UUID()
+    /// Bumped on each reload so the profile list re-renders from Git (global + local metadata).
+    @State private var listRefreshID = UUID()
 
     private let service = GitConfigService.shared
 
     var body: some View {
         VStack(spacing: 0) {
-            currentUserSection
-            Divider()
-
             if profiles.isEmpty {
                 emptyState
             } else {
@@ -25,6 +25,7 @@ struct UsersView: View {
             HStack {
                 Button {
                     editingProfile = nil
+                    editorSessionId = UUID()
                     showEditor = true
                 } label: {
                     Image(systemName: "plus")
@@ -36,7 +37,8 @@ struct UsersView: View {
                 Button { reload() } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("Refresh")
+                .help("Reload all profiles from Git configuration (global and local entries in this list)")
+                .accessibilityLabel("Reload all profiles from Git configuration")
             }
             .padding(10)
         }
@@ -45,26 +47,15 @@ struct UsersView: View {
             if newValue { NSApp.activate(ignoringOtherApps: true) }
         }
         .sheet(isPresented: $showEditor) {
-            ProfileEditor(profile: editingProfile) { saved in
+            ProfileEditor(profile: editingProfile, existingProfiles: profiles) { saved in
                 service.saveProfile(saved)
-                reload()
+                if saved.isLocal {
+                    service.activateProfile(saved)
+                }
+                DispatchQueue.main.async { reload() }
             }
+            .id(editorSessionId)
         }
-    }
-
-    private var currentUserSection: some View {
-        VStack(spacing: 4) {
-            Label("Current Git User", systemImage: "person.circle")
-                .font(.headline)
-            Text(currentName)
-                .font(.body)
-            Text(currentEmail)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor))
     }
 
     private var emptyState: some View {
@@ -87,15 +78,16 @@ struct UsersView: View {
         List {
             ForEach(profiles) { profile in
                 ProfileRow(
-                    profile: profile,
-                    isActive: profile.name == currentName && profile.email == currentEmail,
+                    profile:    profile,
+                    isActive:   activeProfileIds.contains(profile.id),
                     onActivate: {
                         service.activateProfile(profile)
                         reload()
                     },
                     onEdit: {
                         editingProfile = profile
-                        showEditor = true
+                        editorSessionId = UUID()
+                        showEditor     = true
                     },
                     onDelete: {
                         service.deleteProfile(profile)
@@ -104,12 +96,14 @@ struct UsersView: View {
                 )
             }
         }
+        .id(listRefreshID)
     }
 
+    /// Re-reads all `gituserchange-profile.*` rows from Git and recomputes active checkmarks.
     private func reload() {
-        let user = service.loadCurrentUser()
-        currentName = user.name
-        currentEmail = user.email
-        profiles = service.loadProfiles()
+        let loaded = service.loadProfiles()
+        profiles = loaded
+        activeProfileIds = Set(loaded.filter { service.isProfileActive($0) }.map { $0.id })
+        listRefreshID = UUID()
     }
 }

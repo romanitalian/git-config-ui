@@ -13,31 +13,37 @@ struct ProfileRow: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(profile.label)
+                    Text(profile.rowTitle)
                         .fontWeight(.medium)
+                    ScopeBadge(isLocal: profile.isLocal)
                     if isActive {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
                             .font(.caption)
                     }
                 }
+
                 Text("\(profile.name) <\(profile.email)>")
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                if profile.isLocal && !profile.repoPath.isEmpty {
+                    Text(profile.repoPath)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
             }
 
             Spacer()
 
             if !isActive {
-                Button("Activate") {
-                    onActivate()
-                }
-                .controlSize(.small)
+                Button("Set as Global") { onActivate() }
+                    .controlSize(.small)
             }
 
-            Button {
-                onEdit()
-            } label: {
+            Button { onEdit() } label: {
                 Image(systemName: "pencil")
             }
             .controlSize(.small)
@@ -52,9 +58,11 @@ struct ProfileRow: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) { onDelete() }
             } message: {
-                Text("Delete profile \"\(profile.label)\"?")
+                Text("Delete profile \"\(profile.rowTitle)\"?")
             }
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { onEdit() }
     }
 }

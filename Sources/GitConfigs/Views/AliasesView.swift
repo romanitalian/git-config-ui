@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AliasesView: View {
     @State private var aliases: [Alias] = []
-    @State private var showEditor = false
+    @State private var showEditor  = false
     @State private var editingAlias: Alias?
 
     private let service = GitConfigService.shared
@@ -20,7 +20,7 @@ struct AliasesView: View {
             HStack {
                 Button {
                     editingAlias = nil
-                    showEditor = true
+                    showEditor   = true
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -41,6 +41,9 @@ struct AliasesView: View {
         }
         .sheet(isPresented: $showEditor) {
             AliasEditor(alias: editingAlias) { saved in
+                if let old = editingAlias, old.key != saved.key {
+                    service.deleteAlias(key: old.key)
+                }
                 service.saveAlias(saved)
                 reload()
             }
@@ -78,7 +81,7 @@ struct AliasesView: View {
                     Spacer()
                     Button {
                         editingAlias = alias
-                        showEditor = true
+                        showEditor   = true
                     } label: {
                         Image(systemName: "pencil")
                     }
@@ -93,6 +96,11 @@ struct AliasesView: View {
                     .controlSize(.small)
                 }
                 .padding(.vertical, 4)
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) {
+                    editingAlias = alias
+                    showEditor   = true
+                }
             }
         }
     }

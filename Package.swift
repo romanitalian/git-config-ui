@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "GitConfigUI",
+    name: "GitConfigs",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "GitConfigUI",
-            path: "Sources/GitConfigUI"
+            name: "GitConfigs",
+            path: "Sources/GitConfigs"
         ),
     ]
 )

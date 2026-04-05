@@ -4,7 +4,7 @@ YELLOW := $(shell tput setaf 3 2>/dev/null || echo "")
 RED    := $(shell tput setaf 1 2>/dev/null || echo "")
 RESET  := $(shell tput sgr0  2>/dev/null || echo "")
 
-APP_NAME    := GitConfigUI
+APP_NAME    := GitConfigs
 BUNDLE      := $(APP_NAME).app
 INSTALL_DIR := /Applications
 SVG_SRC     := Assets/icon.svg

@@ -10,7 +10,7 @@ struct ContentView: View {
                     .tag(section)
             }
             .listStyle(.sidebar)
-            .navigationTitle("GitConfigUI")
+            .navigationTitle("GitConfigs")
         } detail: {
             switch selectedSection {
             case .users, nil:  UsersView()
