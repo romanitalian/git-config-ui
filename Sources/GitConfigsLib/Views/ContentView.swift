@@ -1,9 +1,11 @@
 import SwiftUI
 
-struct ContentView: View {
+public struct ContentView: View {
     @State private var selectedSection: AppSection? = .users
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationSplitView {
             List(AppSection.allCases, selection: $selectedSection) { section in
                 Label(section.rawValue, systemImage: section.icon)

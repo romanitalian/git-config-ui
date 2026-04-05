@@ -1,3 +1,4 @@
+import GitConfigsLib
 import SwiftUI
 
 @main

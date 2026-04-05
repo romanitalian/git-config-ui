@@ -11,6 +11,9 @@ SVG_SRC     := Assets/icon.svg
 ICONSET     := Assets/AppIcon.iconset
 ICNS        := Assets/AppIcon.icns
 
+XCODEPROJ   := GitConfigsUI.xcodeproj
+XCODE_SCHEME := GitConfigsApp
+
 .DEFAULT_GOAL := help
 
 
@@ -25,7 +28,7 @@ help: ## Available commands
 
 ##@ Targets
 
-.PHONY: build build-release run open icon bundle install uninstall clean test help
+.PHONY: build build-release run open icon bundle install uninstall clean test test-ui test-all help
 
 build: ## Build debug binary
 	swift build
@@ -91,8 +94,15 @@ clean: ## Clean build artifacts, bundle and generated icons
 	swift package clean
 	@rm -rf $(BUNDLE) $(ICONSET) $(ICNS)
 
-test: ## Run tests
+test: ## Run unit + BDD tests (swift test)
 	swift test
+
+test-ui: ## Run XCUITest via xcodebuild (needs Xcode; GUI session for automation)
+	@which xcodegen >/dev/null 2>&1 || { echo "$(RED)Missing xcodegen. Run: brew install xcodegen$(RESET)"; exit 1; }
+	xcodegen generate
+	xcodebuild -project $(XCODEPROJ) -scheme $(XCODE_SCHEME) -destination 'platform=macOS' test
+
+test-all: test test-ui ## Run swift test + UI tests
 
 
 ##@ Aliases

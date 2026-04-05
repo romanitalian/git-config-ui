@@ -1,11 +1,31 @@
 .DS_Store
 
+# Cursor / local agent config (optional tooling; omit from OSS clones if you prefer)
+.cursor/
+
+# JetBrains
+.idea/
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets.history/
+*.vsix
+
+# Environment variables
+.env
+
 # Swift Package Manager
 .build/
 *.resolved
+!Package.resolved
 
 # Xcode
 *.xcodeproj/
+!GitConfigsUI.xcodeproj/
 *.xcworkspace/
 xcuserdata/
 DerivedData/

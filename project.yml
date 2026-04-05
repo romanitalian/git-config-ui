@@ -1,0 +1,50 @@
+name: GitConfigs
+options:
+  bundleIdPrefix: com.romanitalian
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+packages:
+  GitConfigsSPM:
+    path: .
+targets:
+  GitConfigsApp:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Sources/GitConfigs
+    dependencies:
+      - package: GitConfigsSPM
+        product: GitConfigsLib
+    settings:
+      base:
+        PRODUCT_NAME: GitConfigs
+        PRODUCT_BUNDLE_IDENTIFIER: com.romanitalian.GitConfigs
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        INFOPLIST_KEY_NSHighResolutionCapable: YES
+  GitConfigsUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: UITests/GitConfigsUITests
+    dependencies:
+      - target: GitConfigsApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.romanitalian.GitConfigsUITests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  GitConfigsApp:
+    build:
+      targets:
+        GitConfigsApp: all
+        GitConfigsUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - GitConfigsUITests

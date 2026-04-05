@@ -14,16 +14,29 @@ make bundle         # release build + .app bundle with icon
 make install        # bundle + copy to /Applications
 make uninstall      # remove from /Applications
 make clean          # clean build artifacts, bundle, generated icons
-make test           # swift test
+make test           # unit + BDD tests (swift test)
+make test-ui        # XCUITest via xcodebuild (requires Xcode; see Testing)
+make test-all       # make test && make test-ui
 ```
 
-There are no tests yet (`swift test` will pass with an empty suite).
+## Testing
+
+- **`make test`** — Swift Package tests: XCTest (`ProfileTests`, `ConfigScopeTests`, `GitConfigServiceTests` with isolated `HOME`), plus Quick/Nimble BDD specs (`Tests/GitConfigsTests/BDD/`). Requires `/usr/bin/git`.
+- **`make test-ui`** — Runs **XcodeGen** (`brew install xcodegen`) to generate `GitConfigsUI.xcodeproj` from [`project.yml`](project.yml), then runs `xcodebuild test` for the `GitConfigsApp` scheme. XCUITest needs a normal **logged-in macOS GUI session** (automation mode); headless/SSH-only environments often time out.
+- Regenerate the Xcode project after editing `project.yml`: `xcodegen generate`.
 
 ## Architecture
 
-Pure Swift Package Manager project — no Xcode project file. macOS 13+ target.
+Swift Package Manager project with a thin executable and shared library. macOS 13+ target. [`GitConfigsUI.xcodeproj`](GitConfigsUI.xcodeproj) (generated from [`project.yml`](project.yml) via XcodeGen) hosts **XCUITest** (SPM does not run UI test bundles).
+
+**Targets:**
+
+- **`GitConfigsLib`** — [`Sources/GitConfigsLib/`](Sources/GitConfigsLib/) — models, `GitConfigService`, SwiftUI views. `ContentView` is `public` for the app target.
+- **`GitConfigs`** — [`Sources/GitConfigs/App.swift`](Sources/GitConfigs/App.swift) — `@main` entry point.
+- **`GitConfigsTests`** — [`Tests/GitConfigsTests/`](Tests/GitConfigsTests/) — XCTest + Quick/Nimble.
 
 **Data flow:**
+
 ```
 ~/.gitconfig  ←→  GitConfigService  ←→  ContentView  →  ProfileRow / ProfileEditor
 ```
