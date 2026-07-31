@@ -270,14 +270,16 @@ struct ProfileEditor: View {
     private func runGitInit() {
         initErrorMessage = ""
         let path = normalizedWorkTreePath
-        guard !path.isEmpty else { return }
+        guard !path.isEmpty, !isInitializing else { return }
         isInitializing = true
-        let err = service.initializeRepository(workTreePath: path)
-        isInitializing = false
-        if let err {
-            initErrorMessage = err
-        } else {
-            refreshGitConfigPath()
+        Task {
+            let err = await service.initializeRepositoryAsync(workTreePath: path)
+            isInitializing = false
+            if let err {
+                initErrorMessage = err
+            } else {
+                refreshGitConfigPath()
+            }
         }
     }
 

@@ -18,6 +18,7 @@ public struct ContentView: View {
                 List(AppSection.allCases, selection: $selectedSection) { section in
                     Label(section.rawValue, systemImage: section.icon)
                         .tag(section)
+                        .accessibilityIdentifier("sidebarSection-\(section.id)")
                 }
                 .listStyle(.sidebar)
                 .padding(.top, 8)

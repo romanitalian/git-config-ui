@@ -9,6 +9,20 @@ final class GitConfigServiceTests: XCTestCase {
         }
     }
 
+    func testLoadProfilesAsyncUsesIsolatedHome() async throws {
+        try await TestHome.withTemporaryHome { _ in
+            let empty = await GitConfigService.shared.loadProfilesAsync()
+            XCTAssertEqual(empty, [])
+
+            let id = "33333333-3333-3333-3333-333333333333"
+            let p = Profile(id: id, label: "", name: "Bob", email: "bob@example.com", isLocal: false, repoPath: "")
+            await GitConfigService.shared.saveProfileAsync(p)
+            let loaded = await GitConfigService.shared.loadProfilesAsync()
+            XCTAssertEqual(loaded.count, 1)
+            XCTAssertEqual(loaded[0].name, "Bob")
+        }
+    }
+
     func testSaveAndLoadGlobalProfileRoundTrip() throws {
         try TestHome.withTemporaryHome { _ in
             let svc = GitConfigService.shared

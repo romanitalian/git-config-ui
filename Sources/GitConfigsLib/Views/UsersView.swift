@@ -3,18 +3,18 @@ import SwiftUI
 struct UsersView: View {
     @State private var profiles: [Profile] = []
     @State private var activeProfileIds: Set<String> = []
+    @State private var busyProfileIDs: Set<String> = []
+    @State private var isReloading = false
     @State private var showEditor    = false
     @State private var editingProfile: Profile?
     /// Fresh SwiftUI identity per sheet open so ProfileEditor @State is not reused across sessions.
     @State private var editorSessionId = UUID()
-    /// Bumped on each reload so the profile list re-renders from Git (global + local metadata).
-    @State private var listRefreshID = UUID()
 
     private let service = GitConfigService.shared
 
     var body: some View {
         VStack(spacing: 0) {
-            if profiles.isEmpty {
+            if profiles.isEmpty && !isReloading {
                 emptyState
             } else {
                 profilesList
@@ -31,28 +31,39 @@ struct UsersView: View {
                     Image(systemName: "plus")
                 }
                 .help("Add Profile")
+                .disabled(isReloading)
 
                 Spacer()
 
-                Button { reload() } label: {
-                    Image(systemName: "arrow.clockwise")
+                Button { reloadAsync() } label: {
+                    if isReloading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
                 }
                 .help("Reload all profiles from Git configuration (global and local entries in this list)")
                 .accessibilityLabel("Reload all profiles from Git configuration")
+                .disabled(isReloading)
             }
             .padding(10)
         }
-        .onAppear { reload() }
+        .onAppear { reloadAsync() }
         .onChange(of: showEditor) { newValue in
             if newValue { NSApp.activate(ignoringOtherApps: true) }
         }
         .sheet(isPresented: $showEditor) {
             ProfileEditor(profile: editingProfile, existingProfiles: profiles) { saved in
-                service.saveProfile(saved)
-                if saved.isLocal {
-                    service.activateProfile(saved)
+                Task {
+                    isReloading = true
+                    await service.saveProfileAsync(saved)
+                    if saved.isLocal {
+                        await service.activateProfileAsync(saved)
+                    }
+                    await applyReloadFromGit()
+                    isReloading = false
                 }
-                DispatchQueue.main.async { reload() }
             }
             .id(editorSessionId)
         }
@@ -80,30 +91,79 @@ struct UsersView: View {
                 ProfileRow(
                     profile:    profile,
                     isActive:   activeProfileIds.contains(profile.id),
-                    onActivate: {
-                        service.activateProfile(profile)
-                        reload()
-                    },
+                    isBusy:     busyProfileIDs.contains(profile.id),
+                    onActivate: { activateProfile(profile) },
                     onEdit: {
                         editingProfile = profile
                         editorSessionId = UUID()
                         showEditor     = true
                     },
                     onDelete: {
-                        service.deleteProfile(profile)
-                        reload()
+                        withBusyProfile(profile.id) {
+                            await service.deleteProfileAsync(profile)
+                        }
                     }
                 )
             }
         }
-        .id(listRefreshID)
+    }
+
+    private func activateProfile(_ profile: Profile) {
+        let id = profile.id
+        guard !busyProfileIDs.contains(id) else { return }
+        busyProfileIDs.insert(id)
+        Task {
+            await service.activateProfileAsync(profile)
+            await MainActor.run {
+                applyActiveStateAfterActivate(profile)
+                busyProfileIDs.remove(id)
+            }
+        }
+    }
+
+    private func withBusyProfile(_ id: String, _ body: @escaping () async -> Void) {
+        guard !busyProfileIDs.contains(id) else { return }
+        busyProfileIDs.insert(id)
+        Task {
+            await body()
+            await applyReloadFromGit()
+            busyProfileIDs.remove(id)
+        }
+    }
+
+    /// Updates checkmarks after activate without reloading the whole list (avoids a busy→idle→active double blink).
+    @MainActor
+    private func applyActiveStateAfterActivate(_ profile: Profile) {
+        var next = activeProfileIds
+        if profile.isLocal {
+            next.insert(profile.id)
+        } else {
+            for p in profiles where !p.isLocal {
+                next.remove(p.id)
+            }
+            next.insert(profile.id)
+        }
+        activeProfileIds = next
+    }
+
+    private func reloadAsync() {
+        guard !isReloading else { return }
+        isReloading = true
+        Task {
+            await applyReloadFromGit()
+            isReloading = false
+        }
     }
 
     /// Re-reads all `gituserchange-profile.*` rows from Git and recomputes active checkmarks.
-    private func reload() {
-        let loaded = service.loadProfiles()
+    @MainActor
+    private func applyReloadFromGit() async {
+        let loaded = await service.loadProfilesAsync()
         profiles = loaded
-        activeProfileIds = Set(loaded.filter { service.isProfileActive($0) }.map { $0.id })
-        listRefreshID = UUID()
+        var active = Set<String>()
+        for profile in loaded where await service.isProfileActiveAsync(profile) {
+            active.insert(profile.id)
+        }
+        activeProfileIds = active
     }
 }

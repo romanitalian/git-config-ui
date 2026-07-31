@@ -3,11 +3,14 @@ import SwiftUI
 struct ProfileRow: View {
     let profile: Profile
     let isActive: Bool
+    let isBusy: Bool
     let onActivate: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     @State private var showDeleteConfirm = false
+
+    private let setGlobalButtonWidth: CGFloat = 108
 
     var body: some View {
         HStack(spacing: 10) {
@@ -39,14 +42,30 @@ struct ProfileRow: View {
             Spacer()
 
             if !isActive {
-                Button("Set as Global") { onActivate() }
-                    .controlSize(.small)
+                Button(action: onActivate) {
+                    ZStack {
+                        Text("Set as Global")
+                            .opacity(isBusy ? 0 : 1)
+                        if isBusy {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+                    .frame(width: setGlobalButtonWidth)
+                }
+                .controlSize(.small)
+                .disabled(isBusy)
+            } else {
+                Color.clear
+                    .frame(width: setGlobalButtonWidth, height: 1)
+                    .accessibilityHidden(true)
             }
 
-            Button { onEdit() } label: {
+            Button(action: onEdit) {
                 Image(systemName: "pencil")
             }
             .controlSize(.small)
+            .disabled(isBusy)
 
             Button {
                 showDeleteConfirm = true
@@ -54,15 +73,29 @@ struct ProfileRow: View {
                 Image(systemName: "trash")
             }
             .controlSize(.small)
+            .disabled(isBusy)
             .alert("Delete Profile", isPresented: $showDeleteConfirm) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) { onDelete() }
             } message: {
                 Text("Delete profile \"\(profile.rowTitle)\"?")
             }
+
+            if isBusy && isActive {
+                ProgressView()
+                    .controlSize(.small)
+            }
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) { onEdit() }
+        .allowsHitTesting(!isBusy)
+        .accessibilityIdentifier("profileRow-\(profile.id)")
+        .accessibilityValue(isBusy ? "Loading" : "")
+        .animation(nil, value: isActive)
+        .animation(nil, value: isBusy)
+        .onTapGesture(count: 2) {
+            guard !isBusy else { return }
+            onEdit()
+        }
     }
 }
