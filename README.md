@@ -83,3 +83,4 @@ See [SECURITY.md](SECURITY.md) for how to report vulnerabilities.
 ## Developer notes (AI / tooling)
 
 See [CLAUDE.md](CLAUDE.md) for command reference and design notes aimed at assistants and maintainers.
+
