@@ -24,12 +24,14 @@ struct UsersView: View {
 
             HStack {
                 Button {
+                    InstantFeedback.acknowledge()
                     editingProfile = nil
                     editorSessionId = UUID()
                     showEditor = true
                 } label: {
                     Image(systemName: "plus")
                 }
+                .instantPress()
                 .help("Add Profile")
                 .disabled(isReloading)
 
@@ -43,6 +45,7 @@ struct UsersView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
+                .instantPress()
                 .help("Reload all profiles from Git configuration (global and local entries in this list)")
                 .accessibilityLabel("Reload all profiles from Git configuration")
                 .disabled(isReloading)
@@ -55,14 +58,18 @@ struct UsersView: View {
         }
         .sheet(isPresented: $showEditor) {
             ProfileEditor(profile: editingProfile, existingProfiles: profiles) { saved in
+                // Dismiss-first (editor already dismissed) + optimistic list update.
+                InstantFeedback.acknowledge()
+                upsertProfile(saved)
+                if saved.isLocal {
+                    applyActiveStateAfterActivate(saved)
+                }
                 Task {
-                    isReloading = true
                     await service.saveProfileAsync(saved)
                     if saved.isLocal {
                         await service.activateProfileAsync(saved)
                     }
                     await applyReloadFromGit()
-                    isReloading = false
                 }
             }
             .id(editorSessionId)
@@ -85,49 +92,84 @@ struct UsersView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private var globalProfiles: [Profile] { profiles.filter { !$0.isLocal } }
+    private var localProfiles: [Profile] { profiles.filter { $0.isLocal } }
+
     private var profilesList: some View {
         List {
-            ForEach(profiles) { profile in
-                ProfileRow(
-                    profile:    profile,
-                    isActive:   activeProfileIds.contains(profile.id),
-                    isBusy:     busyProfileIDs.contains(profile.id),
-                    onActivate: { activateProfile(profile) },
-                    onEdit: {
-                        editingProfile = profile
-                        editorSessionId = UUID()
-                        showEditor     = true
-                    },
-                    onDelete: {
-                        withBusyProfile(profile.id) {
-                            await service.deleteProfileAsync(profile)
-                        }
+            if !globalProfiles.isEmpty {
+                Section("Global") {
+                    ForEach(globalProfiles) { profile in
+                        profileRow(for: profile)
                     }
-                )
+                }
+            }
+            if !localProfiles.isEmpty {
+                Section("Local") {
+                    ForEach(localProfiles) { profile in
+                        profileRow(for: profile)
+                    }
+                }
             }
         }
     }
 
+    @ViewBuilder
+    private func profileRow(for profile: Profile) -> some View {
+        ProfileRow(
+            profile:    profile,
+            isActive:   activeProfileIds.contains(profile.id),
+            isBusy:     busyProfileIDs.contains(profile.id),
+            onActivate: { activateProfile(profile) },
+            onEdit: {
+                InstantFeedback.acknowledge()
+                editingProfile = profile
+                editorSessionId = UUID()
+                showEditor     = true
+            },
+            onDelete: {
+                withBusyProfile(profile.id) {
+                    await service.deleteProfileAsync(profile)
+                }
+            }
+        )
+    }
+
+    /// Optimistic activate: checkmark moves immediately; git runs in background with rollback on failure.
     private func activateProfile(_ profile: Profile) {
         let id = profile.id
         guard !busyProfileIDs.contains(id) else { return }
-        busyProfileIDs.insert(id)
+        InstantFeedback.acknowledge()
+        let previousActive = activeProfileIds
+        applyActiveStateAfterActivate(profile)
         Task {
             await service.activateProfileAsync(profile)
+            let ok = await service.isProfileActiveAsync(profile)
             await MainActor.run {
-                applyActiveStateAfterActivate(profile)
-                busyProfileIDs.remove(id)
+                if !ok {
+                    activeProfileIds = previousActive
+                }
             }
         }
     }
 
     private func withBusyProfile(_ id: String, _ body: @escaping () async -> Void) {
         guard !busyProfileIDs.contains(id) else { return }
+        InstantFeedback.acknowledge()
         busyProfileIDs.insert(id)
-        Task {
+        InstantFeedback.runAfterPaint {
             await body()
             await applyReloadFromGit()
             busyProfileIDs.remove(id)
+        }
+    }
+
+    @MainActor
+    private func upsertProfile(_ profile: Profile) {
+        if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
+            profiles[index] = profile
+        } else {
+            profiles.append(profile)
         }
     }
 
@@ -148,8 +190,9 @@ struct UsersView: View {
 
     private func reloadAsync() {
         guard !isReloading else { return }
+        InstantFeedback.acknowledge()
         isReloading = true
-        Task {
+        InstantFeedback.runAfterPaint {
             await applyReloadFromGit()
             isReloading = false
         }

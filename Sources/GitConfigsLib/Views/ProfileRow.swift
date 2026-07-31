@@ -53,6 +53,7 @@ struct ProfileRow: View {
                     }
                     .frame(width: setGlobalButtonWidth)
                 }
+                .instantPress()
                 .controlSize(.small)
                 .disabled(isBusy)
             } else {
@@ -64,6 +65,7 @@ struct ProfileRow: View {
             Button(action: onEdit) {
                 Image(systemName: "pencil")
             }
+            .instantPress()
             .controlSize(.small)
             .disabled(isBusy)
 
@@ -72,6 +74,7 @@ struct ProfileRow: View {
             } label: {
                 Image(systemName: "trash")
             }
+            .instantPress()
             .controlSize(.small)
             .disabled(isBusy)
             .alert("Delete Profile", isPresented: $showDeleteConfirm) {

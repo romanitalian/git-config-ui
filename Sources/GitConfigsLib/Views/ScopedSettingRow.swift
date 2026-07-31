@@ -32,9 +32,11 @@ struct ScopedSettingRow: View {
 
             if isDirty {
                 Button("Save") { saveAsync() }
+                    .instantPress()
                     .controlSize(.small)
                     .disabled(isSaving || isLoading)
                 Button("Cancel") { reloadAsync() }
+                    .instantPress()
                     .controlSize(.small)
                     .disabled(isSaving)
             }
@@ -51,8 +53,9 @@ struct ScopedSettingRow: View {
 
     private func reloadAsync() {
         guard !isLoading, !isSaving else { return }
+        InstantFeedback.acknowledge()
         isLoading = true
-        Task {
+        InstantFeedback.runAfterPaint {
             let loaded = await service.readSettingAsync(key)
             value = loaded
             isDirty = false
@@ -62,9 +65,10 @@ struct ScopedSettingRow: View {
 
     private func saveAsync() {
         guard !isSaving else { return }
+        InstantFeedback.acknowledge()
         isSaving = true
         let trimmed = value.trimmingCharacters(in: .whitespaces)
-        Task {
+        InstantFeedback.runAfterPaint {
             if trimmed.isEmpty {
                 await service.unsetSettingAsync(key)
             } else {

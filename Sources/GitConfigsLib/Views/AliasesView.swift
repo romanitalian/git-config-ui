@@ -21,11 +21,13 @@ struct AliasesView: View {
 
             HStack {
                 Button {
+                    InstantFeedback.acknowledge()
                     editingAlias = nil
                     showEditor   = true
                 } label: {
                     Image(systemName: "plus")
                 }
+                .instantPress()
                 .help("Add Alias")
                 .disabled(isReloading)
 
@@ -39,6 +41,7 @@ struct AliasesView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
+                .instantPress()
                 .help("Refresh")
                 .disabled(isReloading)
             }
@@ -50,14 +53,14 @@ struct AliasesView: View {
         }
         .sheet(isPresented: $showEditor) {
             AliasEditor(alias: editingAlias) { saved in
+                InstantFeedback.acknowledge()
+                upsertAlias(saved, replacing: editingAlias)
                 Task {
-                    isReloading = true
                     if let old = editingAlias, old.key != saved.key {
                         await service.deleteAliasAsync(key: old.key)
                     }
                     await service.saveAliasAsync(saved)
                     await applyReloadFromGit()
-                    isReloading = false
                 }
             }
         }
@@ -95,11 +98,13 @@ struct AliasesView: View {
                     Spacer()
                     Button {
                         guard !isBusy else { return }
+                        InstantFeedback.acknowledge()
                         editingAlias = alias
                         showEditor   = true
                     } label: {
                         Image(systemName: "pencil")
                     }
+                    .instantPress()
                     .controlSize(.small)
                     .disabled(isBusy)
 
@@ -108,6 +113,7 @@ struct AliasesView: View {
                     } label: {
                         Image(systemName: "trash")
                     }
+                    .instantPress()
                     .controlSize(.small)
                     .disabled(isBusy)
                 }
@@ -118,6 +124,7 @@ struct AliasesView: View {
                 .accessibilityValue(isBusy ? "Loading" : "")
                 .onTapGesture(count: 2) {
                     guard !isBusy else { return }
+                    InstantFeedback.acknowledge()
                     editingAlias = alias
                     showEditor   = true
                 }
@@ -127,18 +134,31 @@ struct AliasesView: View {
 
     private func deleteAlias(_ alias: Alias) {
         guard !busyAliasKeys.contains(alias.key) else { return }
+        InstantFeedback.acknowledge()
         busyAliasKeys.insert(alias.key)
-        Task {
+        InstantFeedback.runAfterPaint {
             await service.deleteAliasAsync(key: alias.key)
             busyAliasKeys.remove(alias.key)
             await applyReloadFromGit()
         }
     }
 
+    @MainActor
+    private func upsertAlias(_ alias: Alias, replacing old: Alias?) {
+        if let old, let index = aliases.firstIndex(where: { $0.key == old.key }) {
+            aliases[index] = alias
+        } else if let index = aliases.firstIndex(where: { $0.key == alias.key }) {
+            aliases[index] = alias
+        } else {
+            aliases.append(alias)
+        }
+    }
+
     private func reloadAsync() {
         guard !isReloading else { return }
+        InstantFeedback.acknowledge()
         isReloading = true
-        Task {
+        InstantFeedback.runAfterPaint {
             await applyReloadFromGit()
             isReloading = false
         }

@@ -159,6 +159,7 @@ struct ProfileEditor: View {
                                     .truncationMode(.head)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 Button("Choose…") { pickRepo() }
+                                    .instantPress()
                                     .controlSize(.small)
                             }
                         }
@@ -178,6 +179,7 @@ struct ProfileEditor: View {
                                     Button("Initialize repository") {
                                         runGitInit()
                                     }
+                                    .instantPress()
                                     .disabled(!canInitializeGitRepo || isInitializing)
                                     .controlSize(.small)
                                     if isInitializing {
@@ -228,12 +230,14 @@ struct ProfileEditor: View {
 
             HStack {
                 Button("Cancel") { dismiss() }
+                    .instantPress()
                     .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
                 Button("Save") {
                     guard isValid else { return }
+                    InstantFeedback.acknowledge()
                     let storedPath = isLocal ? Self.normalizedAbsoluteRepoPath(repoPath) : ""
                     let trimmedName = name.trimmed
                     let p = Profile(
@@ -247,6 +251,7 @@ struct ProfileEditor: View {
                     onSave(p)
                     dismiss()
                 }
+                .instantPress()
                 .keyboardShortcut(.defaultAction)
                 .disabled(!isValid)
             }
@@ -271,8 +276,9 @@ struct ProfileEditor: View {
         initErrorMessage = ""
         let path = normalizedWorkTreePath
         guard !path.isEmpty, !isInitializing else { return }
+        InstantFeedback.acknowledge()
         isInitializing = true
-        Task {
+        InstantFeedback.runAfterPaint {
             let err = await service.initializeRepositoryAsync(workTreePath: path)
             isInitializing = false
             if let err {
