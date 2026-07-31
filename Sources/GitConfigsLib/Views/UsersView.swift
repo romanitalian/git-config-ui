@@ -92,15 +92,36 @@ struct UsersView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private var columnHeader: some View {
+        ProfileTableLayout.columns(
+            global: { Text("Global") },
+            name: { Text("Name") },
+            email: { Text("Email") },
+            repository: { Text("Repository") },
+            actions: { Color.clear }
+        )
+        .font(.caption)
+        .fontWeight(.semibold)
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Column headers: Global, Name, Email, Repository")
+    }
+
     private var globalProfiles: [Profile] { profiles.filter { !$0.isLocal } }
     private var localProfiles: [Profile] { profiles.filter { $0.isLocal } }
 
     private var profilesList: some View {
         List {
+            columnHeader
+                .listRowInsets(ProfileTableLayout.rowInsets)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+
             if !globalProfiles.isEmpty {
                 Section("Global") {
                     ForEach(globalProfiles) { profile in
                         profileRow(for: profile)
+                            .listRowInsets(ProfileTableLayout.rowInsets)
                     }
                 }
             }
@@ -108,10 +129,12 @@ struct UsersView: View {
                 Section("Local") {
                     ForEach(localProfiles) { profile in
                         profileRow(for: profile)
+                            .listRowInsets(ProfileTableLayout.rowInsets)
                     }
                 }
             }
         }
+        .listStyle(.inset)
     }
 
     @ViewBuilder

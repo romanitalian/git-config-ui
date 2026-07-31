@@ -10,58 +10,77 @@ struct ProfileRow: View {
 
     @State private var showDeleteConfirm = false
 
-    private let setGlobalButtonWidth: CGFloat = 108
-
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(profile.rowTitle)
-                        .fontWeight(.medium)
-                    ScopeBadge(isLocal: profile.isLocal)
-                    if isActive {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.caption)
-                    }
-                }
-
-                Text("\(profile.name) <\(profile.email)>")
-                    .font(.caption)
+        ProfileTableLayout.columns(
+            global: { globalCheckbox },
+            name: {
+                Text(profile.rowTitle)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            },
+            email: {
+                Text(profile.email)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            },
+            repository: { repositoryCell },
+            actions: { actions }
+        )
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .allowsHitTesting(!isBusy)
+        .accessibilityIdentifier("profileRow-\(profile.id)")
+        .accessibilityValue(isBusy ? "Loading" : (isActive ? "Active" : ""))
+        .animation(nil, value: isActive)
+        .animation(nil, value: isBusy)
+        .onTapGesture(count: 2) {
+            guard !isBusy else { return }
+            onEdit()
+        }
+    }
 
-                if profile.isLocal && !profile.repoPath.isEmpty {
-                    Text(profile.repoPath)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.head)
-                }
-            }
-
-            Spacer()
-
-            if !isActive {
-                Button(action: onActivate) {
-                    ZStack {
-                        Text("Set as Global")
-                            .opacity(isBusy ? 0 : 1)
-                        if isBusy {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                    }
-                    .frame(width: setGlobalButtonWidth)
-                }
-                .instantPress()
+    @ViewBuilder
+    private var globalCheckbox: some View {
+        if isBusy {
+            ProgressView()
                 .controlSize(.small)
-                .disabled(isBusy)
-            } else {
-                Color.clear
-                    .frame(width: setGlobalButtonWidth, height: 1)
-                    .accessibilityHidden(true)
+        } else {
+            Button(action: {
+                guard !isActive else { return }
+                onActivate()
+            }) {
+                Image(systemName: isActive ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 14))
+                    .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
+                    .frame(width: ProfileTableLayout.globalWidth, height: 20)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .instantPress()
+            .disabled(isActive)
+            .help(profile.isLocal ? "Activate for this repository" : "Set as Global")
+            .accessibilityLabel(profile.isLocal ? "Set as Local" : "Set as Global")
+            .accessibilityAddTraits(isActive ? .isSelected : [])
+        }
+    }
 
+    @ViewBuilder
+    private var repositoryCell: some View {
+        if profile.isLocal && !profile.repoPath.isEmpty {
+            Text(profile.repoPath)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .truncationMode(.head)
+        } else {
+            Text("—")
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var actions: some View {
+        HStack(spacing: 4) {
             Button(action: onEdit) {
                 Image(systemName: "pencil")
             }
@@ -83,22 +102,6 @@ struct ProfileRow: View {
             } message: {
                 Text("Delete profile \"\(profile.rowTitle)\"?")
             }
-
-            if isBusy && isActive {
-                ProgressView()
-                    .controlSize(.small)
-            }
-        }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .allowsHitTesting(!isBusy)
-        .accessibilityIdentifier("profileRow-\(profile.id)")
-        .accessibilityValue(isBusy ? "Loading" : "")
-        .animation(nil, value: isActive)
-        .animation(nil, value: isBusy)
-        .onTapGesture(count: 2) {
-            guard !isBusy else { return }
-            onEdit()
         }
     }
 }
