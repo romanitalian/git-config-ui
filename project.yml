@@ -51,3 +51,7 @@ schemes:
       config: Debug
       targets:
         - GitConfigsUITests
+      # xcodebuild does not forward shell env vars to the UI test runner; set output dir here so
+      # testCaptureSectionScreenshots sees SCREENSHOTS_DIR (expanded by Xcode at test time).
+      environmentVariables:
+        SCREENSHOTS_DIR: $(SRCROOT)/screenshots

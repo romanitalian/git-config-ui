@@ -60,13 +60,16 @@ struct AliasEditor: View {
 
             HStack {
                 Button("Cancel") { dismiss() }
+                    .instantPress()
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Save") {
+                    InstantFeedback.acknowledge()
                     onSave(Alias(key: key.trimmingCharacters(in: .whitespaces),
                                  value: value.trimmingCharacters(in: .whitespaces)))
                     dismiss()
                 }
+                .instantPress()
                 .keyboardShortcut(.defaultAction)
                 .disabled(!isValid)
             }

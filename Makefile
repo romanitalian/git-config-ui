@@ -16,7 +16,7 @@ APP_LOGO_PNG := Sources/GitConfigsLib/Resources/AppLogo.png
 XCODE_APPICON := Sources/GitConfigs/Assets.xcassets/AppIcon.appiconset
 XCODE_APPLOGO := Sources/GitConfigs/Assets.xcassets/AppLogo.imageset
 
-XCODEPROJ   := GitConfigsUI.xcodeproj
+XCODEPROJ   := GitConfigs.xcodeproj
 XCODE_SCHEME := GitConfigsApp
 
 .DEFAULT_GOAL := help
@@ -33,7 +33,7 @@ help: ## Available commands
 
 ##@ Targets
 
-.PHONY: build build-release run open import-logo icon bundle install uninstall clean test test-ui test-all help
+.PHONY: build build-release run open import-logo icon bundle install uninstall clean test test-ui test-all screenshots help
 
 build: ## Build debug binary
 	swift build
@@ -47,7 +47,7 @@ run: ## Run app (terminal-attached, may lose keyboard focus)
 open: build ## Build and open as .app (correct keyboard focus)
 	open .build/debug/$(APP_NAME)
 
-import-logo: ## Center-crop $(LOGO_IMPORT) to 1024×1024 → $(LOGO_PNG); needs: brew install imagemagick
+import-logo: ## Center-crop $(LOGO_IMPORT) to 1024×1024 → $(LOGO_PNG); needs: brew install imagemagick; usage: make import-logo LOGO_IMPORT=logo.png
 	@test -f $(LOGO_IMPORT) || { echo "$(RED)Missing $(LOGO_IMPORT)$(RESET)"; exit 1; }
 	@which magick > /dev/null 2>&1 || { echo "$(RED)Missing magick. Run: brew install imagemagick$(RESET)"; exit 1; }
 	@magick $(LOGO_IMPORT) -gravity center -extent 1024x1024 $(LOGO_PNG)
@@ -128,6 +128,12 @@ test-ui: ## Run XCUITest via xcodebuild (needs Xcode; GUI session for automation
 	xcodebuild -project $(XCODEPROJ) -scheme $(XCODE_SCHEME) -destination 'platform=macOS' test
 
 test-all: test test-ui ## Run swift test + UI tests
+
+screenshots: ## Capture PNG screenshots of each sidebar section → screenshots/ (needs Xcode, GUI session)
+	@which xcodegen >/dev/null 2>&1 || { echo "$(RED)Missing xcodegen. Run: brew install xcodegen$(RESET)"; exit 1; }
+	@mkdir -p screenshots
+	xcodegen generate
+	xcodebuild -project $(XCODEPROJ) -scheme $(XCODE_SCHEME) -destination 'platform=macOS' -only-testing:GitConfigsUITests/GitConfigsUITests/testCaptureSectionScreenshots test
 
 
 ##@ Aliases

@@ -9,6 +9,8 @@ struct ScopedSettingRow: View {
 
     @State private var value   = ""
     @State private var isDirty = false
+    @State private var isSaving = false
+    @State private var isLoading = false
 
     private let service = GitConfigService.shared
 
@@ -25,28 +27,57 @@ struct ScopedSettingRow: View {
 
             TextField(placeholder, text: $value)
                 .textFieldStyle(.roundedBorder)
+                .disabled(isSaving || isLoading)
                 .onChange(of: value) { _ in isDirty = true }
 
             if isDirty {
-                Button("Save")   { save()   }.controlSize(.small)
-                Button("Cancel") { reload() }.controlSize(.small)
+                Button("Save") { saveAsync() }
+                    .instantPress()
+                    .controlSize(.small)
+                    .disabled(isSaving || isLoading)
+                Button("Cancel") { reloadAsync() }
+                    .instantPress()
+                    .controlSize(.small)
+                    .disabled(isSaving)
+            }
+
+            if isSaving || isLoading {
+                ProgressView()
+                    .controlSize(.small)
             }
         }
         .padding(.vertical, 2)
-        .onAppear { reload() }
+        .opacity(isSaving || isLoading ? 0.65 : 1)
+        .onAppear { reloadAsync() }
     }
 
-    private func reload() {
-        value   = service.readSetting(key)
-        isDirty = false
-    }
-
-    private func save() {
-        if value.trimmingCharacters(in: .whitespaces).isEmpty {
-            service.unsetSetting(key)
-        } else {
-            service.writeSetting(key, value: value)
+    private func reloadAsync() {
+        guard !isLoading, !isSaving else { return }
+        InstantFeedback.acknowledge()
+        isLoading = true
+        InstantFeedback.runAfterPaint {
+            let loaded = await service.readSettingAsync(key)
+            value = loaded
+            isDirty = false
+            isLoading = false
         }
-        reload()
+    }
+
+    private func saveAsync() {
+        guard !isSaving else { return }
+        InstantFeedback.acknowledge()
+        isSaving = true
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        InstantFeedback.runAfterPaint {
+            if trimmed.isEmpty {
+                await service.unsetSettingAsync(key)
+            } else {
+                await service.writeSettingAsync(key, value: value)
+            }
+            let loaded = await service.readSettingAsync(key)
+            value = loaded
+            isDirty = false
+            isSaving = false
+        }
     }
 }

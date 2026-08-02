@@ -18,4 +18,21 @@ enum TestHome {
         }
         try body(home)
     }
+
+    static func withTemporaryHome(_ body: (URL) async throws -> Void) async throws {
+        let home = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GitConfigsTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        let previous = ProcessInfo.processInfo.environment["HOME"]
+        setenv("HOME", home.path, 1)
+        defer {
+            if let p = previous {
+                setenv("HOME", p, 1)
+            } else {
+                unsetenv("HOME")
+            }
+            try? FileManager.default.removeItem(at: home)
+        }
+        try await body(home)
+    }
 }
