@@ -53,4 +53,8 @@ extension GitConfigService {
     func initializeRepositoryAsync(workTreePath: String) async -> String? {
         await performOffMain { self.initializeRepository(workTreePath: workTreePath) }
     }
+
+    func absoluteGitConfigFilePathAsync(workTreePath: String) async -> String? {
+        await performOffMain { self.absoluteGitConfigFilePath(workTreePath: workTreePath) }
+    }
 }

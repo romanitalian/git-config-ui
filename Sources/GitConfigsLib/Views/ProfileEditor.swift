@@ -18,6 +18,8 @@ struct ProfileEditor: View {
     @State private var configFilePreviewText: String = ""
     @State private var initErrorMessage: String = ""
     @State private var isInitializing = false
+    /// Cached result of resolving the work tree via git (never shell out from body).
+    @State private var hasValidGitRepo = false
 
     @FocusState private var focusedField: Field?
 
@@ -63,14 +65,6 @@ struct ProfileEditor: View {
             let other = Self.normalizedAbsoluteRepoPath(p.repoPath)
             return !other.isEmpty && other == mine
         }
-    }
-
-    /// Local scope requires a real Git work tree (same check as resolved config path).
-    private var hasValidGitRepo: Bool {
-        guard isLocal else { return true }
-        let n = Self.normalizedAbsoluteRepoPath(repoPath)
-        guard !n.isEmpty else { return false }
-        return service.absoluteGitConfigFilePath(workTreePath: n) != nil
     }
 
     private var isValid: Bool {
@@ -206,12 +200,18 @@ struct ProfileEditor: View {
                                 title: "Config file",
                                 subtitle: "Local Git configuration for this repository"
                             ) {
-                                Text(gitConfigFileDisplay.isEmpty ? "—" : gitConfigFileDisplay)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(4)
-                                    .truncationMode(.head)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text(gitConfigFileDisplay.isEmpty ? "—" : gitConfigFileDisplay)
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(4)
+                                        .truncationMode(.head)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Button("Show in Finder") { revealConfigFileInFinder() }
+                                        .instantPress()
+                                        .controlSize(.small)
+                                        .disabled(!canRevealConfigFile)
+                                }
                             }
                         }
                     }
@@ -352,21 +352,32 @@ struct ProfileEditor: View {
     private func refreshGitConfigPath() {
         guard isLocal else {
             gitConfigFileDisplay = ""
+            hasValidGitRepo = false
             refreshConfigFilePreview()
             return
         }
         let normalized = Self.normalizedAbsoluteRepoPath(repoPath)
         guard !normalized.isEmpty else {
             gitConfigFileDisplay = ""
+            hasValidGitRepo = false
             refreshConfigFilePreview()
             return
         }
-        if let path = service.absoluteGitConfigFilePath(workTreePath: normalized) {
-            gitConfigFileDisplay = path
-        } else {
-            gitConfigFileDisplay = "Not a Git repository"
+        // Clear until async resolve finishes so body never uses a stale valid flag.
+        hasValidGitRepo = false
+        InstantFeedback.runAfterPaint {
+            let path = await service.absoluteGitConfigFilePathAsync(workTreePath: normalized)
+            // Ignore stale results if the path changed while git was running.
+            guard Self.normalizedAbsoluteRepoPath(repoPath) == normalized, isLocal else { return }
+            if let path {
+                gitConfigFileDisplay = path
+                hasValidGitRepo = true
+            } else {
+                gitConfigFileDisplay = "Not a Git repository"
+                hasValidGitRepo = false
+            }
+            refreshConfigFilePreview()
         }
-        refreshConfigFilePreview()
     }
 
     private func refreshConfigFilePreview() {
@@ -422,6 +433,23 @@ struct ProfileEditor: View {
     private static func truncatePreview(_ s: String, limit: Int) -> String {
         guard s.count > limit else { return s }
         return String(s.prefix(limit)) + "\n\n… (truncated)"
+    }
+
+    private var canRevealConfigFile: Bool {
+        !gitConfigFileDisplay.isEmpty && gitConfigFileDisplay != "Not a Git repository"
+    }
+
+    private func revealConfigFileInFinder() {
+        guard canRevealConfigFile else { return }
+        let url = URL(fileURLWithPath: gitConfigFileDisplay)
+        let fm = FileManager.default
+        if fm.fileExists(atPath: url.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            return
+        }
+        let parent = url.deletingLastPathComponent()
+        guard fm.fileExists(atPath: parent.path) else { return }
+        NSWorkspace.shared.open(parent)
     }
 
     private func pickRepo() {

@@ -18,6 +18,7 @@ struct UsersView: View {
                 emptyState
             } else {
                 profilesList
+                    .debugBorder(UIDebug.list)
             }
 
             Divider()
@@ -51,6 +52,7 @@ struct UsersView: View {
                 .disabled(isReloading)
             }
             .padding(10)
+            .debugBorder(UIDebug.toolbar)
         }
         .onAppear { reloadAsync() }
         .onChange(of: showEditor) { newValue in
@@ -92,9 +94,48 @@ struct UsersView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var columnHeader: some View {
+    private var globalProfiles: [Profile] { profiles.filter { !$0.isLocal } }
+    private var localProfiles: [Profile] { profiles.filter { $0.isLocal } }
+
+    private var profilesList: some View {
+        List {
+            if !globalProfiles.isEmpty {
+                Section {
+                    sectionColumnHeader()
+                    ForEach(globalProfiles) { profile in
+                        profileRow(for: profile)
+                            .listRowInsets(ProfileTableLayout.rowInsets)
+                    }
+                } header: {
+                    sectionTitle("Global")
+                }
+            }
+            if !localProfiles.isEmpty {
+                Section {
+                    sectionColumnHeader()
+                    ForEach(localProfiles) { profile in
+                        profileRow(for: profile)
+                            .listRowInsets(ProfileTableLayout.rowInsets)
+                    }
+                } header: {
+                    sectionTitle("Local")
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.title2)
+            .fontWeight(.semibold)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .textCase(nil)
+    }
+
+    private func sectionColumnHeader() -> some View {
         ProfileTableLayout.columns(
-            global: { Text("Global") },
+            active: { Text("Active") },
             name: { Text("Name") },
             email: { Text("Email") },
             repository: { Text("Repository") },
@@ -104,37 +145,10 @@ struct UsersView: View {
         .fontWeight(.semibold)
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Column headers: Global, Name, Email, Repository")
-    }
-
-    private var globalProfiles: [Profile] { profiles.filter { !$0.isLocal } }
-    private var localProfiles: [Profile] { profiles.filter { $0.isLocal } }
-
-    private var profilesList: some View {
-        List {
-            columnHeader
-                .listRowInsets(ProfileTableLayout.rowInsets)
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-
-            if !globalProfiles.isEmpty {
-                Section("Global") {
-                    ForEach(globalProfiles) { profile in
-                        profileRow(for: profile)
-                            .listRowInsets(ProfileTableLayout.rowInsets)
-                    }
-                }
-            }
-            if !localProfiles.isEmpty {
-                Section("Local") {
-                    ForEach(localProfiles) { profile in
-                        profileRow(for: profile)
-                            .listRowInsets(ProfileTableLayout.rowInsets)
-                    }
-                }
-            }
-        }
-        .listStyle(.inset)
+        .accessibilityLabel("Column headers: Active, Name, Email, Repository")
+        .debugBorder(UIDebug.header)
+        .listRowInsets(ProfileTableLayout.rowInsets)
+        .listRowSeparator(.hidden)
     }
 
     @ViewBuilder

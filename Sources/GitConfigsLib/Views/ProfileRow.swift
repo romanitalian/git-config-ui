@@ -12,7 +12,7 @@ struct ProfileRow: View {
 
     var body: some View {
         ProfileTableLayout.columns(
-            global: { globalCheckbox },
+            active: { activeControl },
             name: {
                 Text(profile.rowTitle)
                     .fontWeight(.medium)
@@ -28,10 +28,15 @@ struct ProfileRow: View {
             actions: { actions }
         )
         .padding(.vertical, 2)
+        .debugBorder(UIDebug.row)
         .contentShape(Rectangle())
         .allowsHitTesting(!isBusy)
         .accessibilityIdentifier("profileRow-\(profile.id)")
         .accessibilityValue(isBusy ? "Loading" : (isActive ? "Active" : ""))
+        .accessibilityAction(named: "Edit") {
+            guard !isBusy else { return }
+            onEdit()
+        }
         .animation(nil, value: isActive)
         .animation(nil, value: isBusy)
         .onTapGesture(count: 2) {
@@ -41,7 +46,7 @@ struct ProfileRow: View {
     }
 
     @ViewBuilder
-    private var globalCheckbox: some View {
+    private var activeControl: some View {
         if isBusy {
             ProgressView()
                 .controlSize(.small)
@@ -50,10 +55,10 @@ struct ProfileRow: View {
                 guard !isActive else { return }
                 onActivate()
             }) {
-                Image(systemName: isActive ? "checkmark.square.fill" : "square")
+                Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 14))
                     .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
-                    .frame(width: ProfileTableLayout.globalWidth, height: 20)
+                    .frame(width: ProfileTableLayout.activeWidth, height: 20)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -73,6 +78,7 @@ struct ProfileRow: View {
                 .foregroundColor(.secondary)
                 .lineLimit(1)
                 .truncationMode(.head)
+                .help(profile.repoPath)
         } else {
             Text("—")
                 .foregroundColor(.secondary)
@@ -80,22 +86,34 @@ struct ProfileRow: View {
     }
 
     private var actions: some View {
-        HStack(spacing: 4) {
-            Button(action: onEdit) {
+        HStack(spacing: ProfileTableLayout.actionSpacing) {
+            Button {
+                onEdit()
+            } label: {
                 Image(systemName: "pencil")
+                    .frame(width: ProfileTableLayout.actionHitSize, height: ProfileTableLayout.actionHitSize)
+                    .contentShape(Rectangle())
+                    .debugBorder(UIDebug.actionButton)
             }
+            .buttonStyle(.plain)
             .instantPress()
-            .controlSize(.small)
             .disabled(isBusy)
+            .help("Edit")
+            .accessibilityLabel("Edit")
 
             Button {
                 showDeleteConfirm = true
             } label: {
                 Image(systemName: "trash")
+                    .frame(width: ProfileTableLayout.actionHitSize, height: ProfileTableLayout.actionHitSize)
+                    .contentShape(Rectangle())
+                    .debugBorder(UIDebug.actionButton)
             }
+            .buttonStyle(.plain)
             .instantPress()
-            .controlSize(.small)
             .disabled(isBusy)
+            .help("Delete")
+            .accessibilityLabel("Delete")
             .alert("Delete Profile", isPresented: $showDeleteConfirm) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) { onDelete() }
